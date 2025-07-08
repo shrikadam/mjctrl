@@ -121,7 +121,7 @@ def main() -> None:
                 Mx = np.linalg.inv(Mx_inv)
             else:
                 Mx = np.linalg.pinv(Mx_inv, rcond=1e-2)
-
+            
             # Compute generalized forces.
             tau = jac.T @ Mx @ (Kp * twist - Kd * (jac @ data.qvel[dof_ids]))
 
