@@ -24,7 +24,7 @@ def main() -> None:
     assert mujoco.__version__ >= "3.1.0", "Please upgrade to mujoco 3.1.0 or later."
 
     # Load the model and data.
-    model = mujoco.MjModel.from_xml_path("universal_robots_ur5e/scene.xml")
+    model = mujoco.MjModel.from_xml_path("universal_robots_ur10e/scene.xml")
     data = mujoco.MjData(model)
 
     # Override the simulation timestep.
@@ -33,19 +33,6 @@ def main() -> None:
     # End-effector site we wish to control, in this case a site attached to the last
     # link (wrist_3_link) of the robot.
     site_id = model.site("attachment_site").id
-
-    # Name of bodies we wish to apply gravity compensation to.
-    body_names = [
-        "shoulder_link",
-        "upper_arm_link",
-        "forearm_link",
-        "wrist_1_link",
-        "wrist_2_link",
-        "wrist_3_link",
-    ]
-    body_ids = [model.body(name).id for name in body_names]
-    if gravity_compensation:
-        model.body_gravcomp[body_ids] = 1.0
 
     # Get the dof and actuator ids for the joints we wish to control.
     joint_names = [
@@ -61,20 +48,39 @@ def main() -> None:
     actuator_ids = np.array([model.actuator(name).id for name in joint_names])
 
     # Initial joint configuration saved as a keyframe in the XML file.
-    key_id = model.key("home").id
+    key_name = "home"
+    key_id = model.key(key_name).id
+    q0 = model.key(key_name).qpos
     
     # Mocap body we will control with our mouse.
-    mocap_id = model.body("target").mocapid[0]
+    mocap_name = "target"
+    mocap_id = model.body(mocap_name).mocapid[0]
 
     # Pre-allocate numpy arrays.
     jac = np.zeros((6, model.nv))
-    diag = damping * np.eye(6)
     error = np.zeros(6)
     error_pos = error[:3]
     error_ori = error[3:]
     site_quat = np.zeros(4)
     site_quat_conj = np.zeros(4)
     error_quat = np.zeros(4)
+    M_inv = np.zeros((model.nv, model.nv))
+    M_full = np.zeros((model.nv, model.nv))
+    np.set_printoptions(precision=4, suppress=True)
+
+    min_effort = -150.0
+    max_effort = 150.0
+    kp = 200.0
+    ko = 200.0
+    kv = 50.0
+    vmax_xyz = 1.0
+    vmax_abg = 2.0
+    task_space_gains = np.array([kp] * 3 + [ko] * 3)
+    lamb = task_space_gains / kv
+    sat_gain_xyz = vmax_xyz / kp * kv
+    sat_gain_abg = vmax_abg / ko * kv
+    scale_xyz = vmax_xyz / kp * kv
+    scale_abg = vmax_abg / ko * kv
 
     with mujoco.viewer.launch_passive(
         model=model, data=data, show_left_ui=False, show_right_ui=False
@@ -99,26 +105,52 @@ def main() -> None:
             mujoco.mju_negQuat(site_quat_conj, site_quat)
             mujoco.mju_mulQuat(error_quat, data.mocap_quat[mocap_id], site_quat_conj)
             mujoco.mju_quat2Vel(error_ori, error_quat, 1.0)
-
+            
             # Get the Jacobian with respect to the end-effector site.
             mujoco.mj_jacSite(model, data, jac[:3], jac[3:], site_id)
-            
-            # Solve system of equations: J @ dq = error.
-            dq = jac.T @ np.linalg.solve(jac @ jac.T + diag, error)
+            jac = jac[:, model.jnt_dofadr]
+            print(model.jnt_dofadr)
+            mujoco.mj_fullM(model, M_full, data.qM)
+            M_gen = M_full[model.jnt_dofadr, :][:, model.jnt_dofadr]
 
-            # Scale down joint velocities if they exceed maximum.
-            if max_angvel > 0:
-                dq_abs_max = np.abs(dq).max()
-                if dq_abs_max > max_angvel:
-                    dq *= max_angvel / dq_abs_max
+            # Calculate the inertia matrix in task space
+            M_inv = np.linalg.inv(M_gen)
+            Mx_inv = np.dot(jac, np.dot(M_inv, jac.T))
+            if abs(np.linalg.det(Mx_inv)) >= 1e-3:
+                # do the linalg inverse if matrix is non-singular
+                # because it's faster and more accurate
+                Mx = np.linalg.inv(Mx_inv)
+            else:
+                # using the rcond to set singular values < thresh to 0
+                # singular values < (rcond * max(singular_values)) set to 0
+                Mx = np.linalg.pinv(Mx_inv, rcond=1e-3 * 0.1)
 
-            # Integrate joint velocities to obtain joint positions.
-            q = data.qpos.copy()
-            mujoco.mj_integratePos(model, q, dq, integration_dt)
+            dq = data.qvel[dof_ids]
 
-            # Set the control signal.
-            np.clip(q, *model.jnt_range.T, out=q)
-            data.ctrl[actuator_ids] = q[dof_ids]
+            # Initialize the task space control signal (desired end-effector motion).
+            u_task = np.zeros(6)
+
+            norm_xyz = np.linalg.norm(u_task[:3])
+            norm_abg = np.linalg.norm(u_task[3:])
+            scale = np.ones(6)
+            if norm_xyz > sat_gain_xyz:
+                scale[:3] *= scale_xyz / norm_xyz
+            if norm_abg > sat_gain_abg:
+                scale[3:] *= scale_abg / norm_abg
+
+            u_task += kv * scale * lamb * u_task
+            # joint space control signal
+            u = np.zeros(model.nv)
+            # Add the task space control signal to the joint space control signal
+            u += np.dot(jac.T, np.dot(Mx, u_task))
+            # Add damping to joint space control signal
+            u += -kv * np.dot(M_gen, dq)
+            # Add gravity compensation to the target effort
+            u += data.qfrc_bias[dof_ids]
+            # Clip the target efforts to ensure they are within the allowable effort range
+            target_effort = np.clip(u, min_effort, max_effort)
+            # Set the control signals for the actuators to the desired target joint positions or states
+            data.qfrc_applied[dof_ids] = target_effort
             
             # Step the simulation.
             mujoco.mj_step(model, data)

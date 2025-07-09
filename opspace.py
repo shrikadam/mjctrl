@@ -110,7 +110,6 @@ def main() -> None:
             mujoco.mju_mulQuat(error_quat, data.mocap_quat[mocap_id], site_quat_conj)
             mujoco.mju_quat2Vel(twist[3:], error_quat, 1.0)
             twist[3:] *= Kori / integration_dt
-
             # Jacobian.
             mujoco.mj_jacSite(model, data, jac[:3], jac[3:], site_id)
 
