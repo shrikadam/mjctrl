@@ -25,7 +25,7 @@ def main() -> None:
     assert mujoco.__version__ >= "3.1.0", "Please upgrade to mujoco 3.1.0 or later."
 
     # Load the model and data.
-    model = mujoco.MjModel.from_xml_path("universal_robots_ur5e/scene.xml")
+    model = mujoco.MjModel.from_xml_path("universal_robots_ur10e/scene.xml")
     data = mujoco.MjData(model)
 
     # Override the simulation timestep.
@@ -101,7 +101,7 @@ def main() -> None:
             step_start = time.time()
 
             # Set the target position of the end-effector site.
-            data.mocap_pos[mocap_id, 0:2] = circle(data.time, 0.1, 0.5, 0.0, 0.5)
+            # data.mocap_pos[mocap_id, 0:2] = circle(data.time, 0.1, 0.5, 0.0, 0.5)
 
             # Position error.
             error_pos[:] = data.mocap_pos[mocap_id] - data.site(site_id).xpos
@@ -114,7 +114,6 @@ def main() -> None:
 
             # Get the Jacobian with respect to the end-effector site.
             mujoco.mj_jacSite(model, data, jac[:3], jac[3:], site_id)
-
             # Solve system of equations: J @ dq = error.
             dq = jac.T @ np.linalg.solve(jac @ jac.T + diag, error)
 

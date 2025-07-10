@@ -38,7 +38,7 @@ def main() -> None:
     # Load the model and data.
     model = mujoco.MjModel.from_xml_path("kuka_iiwa_14/scene.xml")
     data = mujoco.MjData(model)
-
+    
     model.opt.timestep = dt
 
     # Compute damping and stiffness matrices.
@@ -51,7 +51,7 @@ def main() -> None:
     # End-effector site we wish to control.
     site_name = "attachment_site"
     site_id = model.site(site_name).id
-
+    
     # Get the dof and actuator ids for the joints we wish to control. These are copied
     # from the XML file. Feel free to comment out some joints to see the effect on
     # the controller.
@@ -93,7 +93,7 @@ def main() -> None:
     ) as viewer:
         # Reset the simulation.
         mujoco.mj_resetDataKeyframe(model, data, key_id)
-
+        
         # Reset the free camera.
         mujoco.mjv_defaultFreeCamera(model, viewer.cam)
 
@@ -101,7 +101,6 @@ def main() -> None:
         viewer.opt.frame = mujoco.mjtFrame.mjFRAME_SITE
         while viewer.is_running():
             step_start = time.time()
-
             # Spatial velocity (aka twist).
             dx = data.mocap_pos[mocap_id] - data.site(site_id).xpos
             twist[:3] = Kpos * dx / integration_dt
@@ -112,7 +111,6 @@ def main() -> None:
             twist[3:] *= Kori / integration_dt
             # Jacobian.
             mujoco.mj_jacSite(model, data, jac[:3], jac[3:], site_id)
-
             # Compute the task-space inertia matrix.
             mujoco.mj_solveM(model, data, M_inv, np.eye(model.nv))
             Mx_inv = jac @ M_inv @ jac.T
