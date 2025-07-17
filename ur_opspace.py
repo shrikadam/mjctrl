@@ -36,6 +36,8 @@ def main() -> None:
     
     # Override the simulation timestep.
     model.opt.timestep = dt
+    # Enable gravity compensation. Set to 0.0 to disable.
+    model.body_gravcomp[:] = float(gravity_compensation)
 
     # End-effector site we wish to control, in this case a site attached to the last
     # link (wrist_3_link) of the robot.
@@ -81,21 +83,6 @@ def main() -> None:
     Kd = np.concatenate([damping_pos, damping_ori], axis=0)
     Kd_null = damping_ratio * 2 * np.sqrt(Kp_null)
 
-    # min_effort = -150.0
-    # max_effort = 150.0
-    # kp = 200.0
-    # ko = 200.0
-    # kv = 50.0
-    # vmax_xyz = 1.0
-    # vmax_abg = 2.0
-    # task_space_gains = np.array([kp] * 3 + [ko] * 3)
-    # lamb = task_space_gains / kv
-    # sat_gain_xyz = vmax_xyz / kp * kv
-    # sat_gain_abg = vmax_abg / ko * kv
-    # scale_xyz = vmax_xyz / kp * kv
-    # scale_abg = vmax_abg / ko * kv
-    # M_full = np.zeros((model.nv, model.nv))
-
     with mujoco.viewer.launch_passive(
         model=model, data=data, show_left_ui=False, show_right_ui=False
     ) as viewer:
@@ -124,49 +111,6 @@ def main() -> None:
             error_ori *= Kori / integration_dt
             # Get the Jacobian with respect to the end-effector site.
             mujoco.mj_jacSite(model, data, jac[:3], jac[3:], site_id)
-
-            ############################################################################################
-            # Calculate full inertia matrix
-            # mujoco.mj_fullM(model, M_full, data.qM)
-            # # Calculate the inertia matrix in task space
-            # M_inv = np.linalg.inv(M_full)
-            # Mx_inv = np.dot(jac, np.dot(M_inv, jac.T))
-            # if abs(np.linalg.det(Mx_inv)) >= 1e-3:
-            #     # do the linalg inverse if matrix is non-singular
-            #     # because it's faster and more accurate
-            #     Mx = np.linalg.inv(Mx_inv)
-            # else:
-            #     # using the rcond to set singular values < thresh to 0
-            #     # singular values < (rcond * max(singular_values)) set to 0
-            #     Mx = np.linalg.pinv(Mx_inv, rcond=1e-3 * 0.1)
-            
-            # dq = data.qvel[dof_ids]
-
-            # # Initialize the task space control signal (desired end-effector motion).
-            # u_task = np.zeros(6)
-
-            # norm_xyz = np.linalg.norm(u_task[:3])
-            # norm_abg = np.linalg.norm(u_task[3:])
-            # scale = np.ones(6)
-            # if norm_xyz > sat_gain_xyz:
-            #     scale[:3] *= scale_xyz / norm_xyz
-            # if norm_abg > sat_gain_abg:
-            #     scale[3:] *= scale_abg / norm_abg
-
-            # u_task += kv * scale * lamb * u_task
-            # # joint space control signal
-            # u = np.zeros(model.nv)
-            # # Add the task space control signal to the joint space control signal
-            # u += np.dot(jac.T, np.dot(Mx, u_task))
-            # # Add damping to joint space control signal
-            # u += -kv * np.dot(M_full, dq)
-            # # Add gravity compensation to the target effort
-            # u += data.qfrc_bias[dof_ids]
-            # # Clip the target efforts to ensure they are within the allowable effort range
-            # target_effort = np.clip(u, min_effort, max_effort)
-            # # Set the control signals for the actuators to the desired target joint positions or states
-            # data.qfrc_applied[dof_ids] = target_effort
-            ############################################################################################
             
             # Compute the task-space inertia matrix.
             mujoco.mj_solveM(model, data, M_inv, np.eye(model.nv))
@@ -184,14 +128,13 @@ def main() -> None:
             ddq = Kp_null * (q0 - data.qpos[dof_ids]) - Kd_null * data.qvel[dof_ids]
             tau += (np.eye(model.nv) - jac.T @ Jbar.T) @ ddq
 
-            # Add gravity compensation.
-            if gravity_compensation:
-                tau += data.qfrc_bias[dof_ids]
+            # # Add gravity compensation.
+            # if gravity_compensation:
+            #     tau += data.qfrc_bias[dof_ids]
 
             # Set the control signal and step the simulation.
             np.clip(tau, *model.actuator_ctrlrange.T, out=tau)
             data.ctrl[actuator_ids] = tau[actuator_ids]
-            ################################################################################
             
             # Step the simulation.
             mujoco.mj_step(model, data)

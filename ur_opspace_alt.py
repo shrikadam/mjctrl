@@ -33,7 +33,7 @@ def main() -> None:
 
     # End-effector site we wish to control, in this case a site attached to the last
     # link (wrist_3_link) of the robot.
-    site_name = "attachment_site"
+    site_name = "eef_site"
     site_id = model.site(site_name).id
 
     # Get the dof and actuator ids for the joints we wish to control.
@@ -46,6 +46,7 @@ def main() -> None:
         "wrist_3",
     ]
     dof_ids = np.array([model.joint(name).id for name in joint_names])
+    # actuator_ids = np.array([model.actuator(name).id for name in joint_names])
     
     # Initial joint configuration saved as a keyframe in the XML file.
     key_name = "home"
@@ -83,7 +84,7 @@ def main() -> None:
 
             # Position error.
             error_pos[:] = data.mocap_pos[mocap_id] - data.site(site_id).xpos
-            
+
             # Orientation error.
             mujoco.mju_mat2Quat(site_quat, data.site(site_id).xmat)
             mujoco.mju_negQuat(site_quat_conj, site_quat)
@@ -91,7 +92,6 @@ def main() -> None:
             mujoco.mju_quat2Vel(error_ori, error_quat, 1.0)
             # Get the Jacobian with respect to the end-effector site.
             mujoco.mj_jacSite(model, data, jac[:3], jac[3:], site_id)
-
             # Calculate full inertia matrix
             mujoco.mj_fullM(model, M_full, data.qM)
             
@@ -133,6 +133,7 @@ def main() -> None:
             target_effort = np.clip(u, min_effort, max_effort)
             # Set the control signals for the actuators to the desired target joint positions or states
             data.qfrc_applied[dof_ids] = target_effort
+            # data.ctrl[actuator_ids] = target_effort[actuator_ids]
             
             # Step the simulation.
             mujoco.mj_step(model, data)
