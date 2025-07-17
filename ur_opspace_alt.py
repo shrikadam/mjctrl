@@ -79,6 +79,8 @@ def main() -> None:
         # Toggle site frame visualization.
         viewer.opt.frame = mujoco.mjtFrame.mjFRAME_SITE
 
+        mujoco.mj_forward(model, data)
+        
         while viewer.is_running():
             step_start = time.time()
 
@@ -90,7 +92,7 @@ def main() -> None:
             mujoco.mju_negQuat(site_quat_conj, site_quat)
             mujoco.mju_mulQuat(error_quat, data.mocap_quat[mocap_id], site_quat_conj)
             mujoco.mju_quat2Vel(error_ori, error_quat, 1.0)
-            mujoco.mj_forward(model, data)
+            
             # Get the Jacobian with respect to the end-effector site.
             mujoco.mj_jacSite(model, data, jac[:3], jac[3:], site_id)
             # Calculate full inertia matrix
