@@ -136,17 +136,21 @@
     </body>
   </worldbody>
 
-  <!-- <actuator> -->
-  <!-- <general class="position" name="shoulder_pan" joint="shoulder_pan" />
+  <!-- <actuator>
+    <general class="position" name="shoulder_pan" joint="shoulder_pan" />
     <general class="position" name="shoulder_lift" joint="shoulder_lift" />
     <general class="position_limited" name="elbow" joint="elbow" />
     <general class="position_small" name="wrist_1" joint="wrist_1" />
     <general class="position_small" name="wrist_2" joint="wrist_2" />
-    <general class="position_small" name="wrist_3" joint="wrist_3" /> -->
-  <!-- </actuator> -->
+    <general class="position_small" name="wrist_3" joint="wrist_3" />
+  </actuator> -->
 
   <!-- <keyframe>
     <key name="home" qpos="-1.5708 -1.5708 1.5708 -1.5708 -1.5708 0"
       ctrl="-1.5708 -1.5708 1.5708 -1.5708 -1.5708 0" />
-  </keyframe> -->
+  </keyframe>  -->
+
+  <keyframe>
+    <key name="home" qpos="0 -1.5708 1.5708 -1.5708 -1.5708 0"/>
+  </keyframe> 
 </mujoco>

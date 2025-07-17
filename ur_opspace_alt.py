@@ -90,6 +90,7 @@ def main() -> None:
             mujoco.mju_negQuat(site_quat_conj, site_quat)
             mujoco.mju_mulQuat(error_quat, data.mocap_quat[mocap_id], site_quat_conj)
             mujoco.mju_quat2Vel(error_ori, error_quat, 1.0)
+            mujoco.mj_forward(model, data)
             # Get the Jacobian with respect to the end-effector site.
             mujoco.mj_jacSite(model, data, jac[:3], jac[3:], site_id)
             # Calculate full inertia matrix
@@ -112,15 +113,15 @@ def main() -> None:
             # Initialize the task space control signal (desired end-effector motion).
             u_task = np.zeros(6)
 
-            norm_xyz = np.linalg.norm(u_task[:3])
-            norm_abg = np.linalg.norm(u_task[3:])
+            norm_xyz = np.linalg.norm(error_pos)
+            norm_abg = np.linalg.norm(error_ori)
             scale = np.ones(6)
             if norm_xyz > sat_gain_xyz:
                 scale[:3] *= scale_xyz / norm_xyz
             if norm_abg > sat_gain_abg:
                 scale[3:] *= scale_abg / norm_abg
 
-            u_task += kv * scale * lamb * u_task
+            u_task += kv * scale * lamb * error
             # joint space control signal
             u = np.zeros(model.nv)
             # Add the task space control signal to the joint space control signal
