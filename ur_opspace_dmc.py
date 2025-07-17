@@ -292,9 +292,8 @@ def main() -> None:
         -1.5707,
         0.0,
     ]
-   
     set_mocap_pose(mocap, physics, position=[0.5, 0, 0.3], quaternion=[0, 0, 0, 1])
-
+    
     controller = OperationalSpaceController(
                 physics=physics,
                 joints=model.find_all('joint'),
