@@ -18,7 +18,6 @@ scale_xyz = vmax_xyz / kp * kv
 scale_abg = vmax_abg / ko * kv
 dt: float = 0.002
 
-
 np.set_printoptions(precision=4, suppress=True)
 
 def main() -> None:
@@ -46,7 +45,6 @@ def main() -> None:
         "wrist_3",
     ]
     dof_ids = np.array([model.joint(name).id for name in joint_names])
-    # actuator_ids = np.array([model.actuator(name).id for name in joint_names])
     
     # Initial joint configuration saved as a keyframe in the XML file.
     key_name = "home"
@@ -95,12 +93,12 @@ def main() -> None:
             
             # Get the Jacobian with respect to the end-effector site.
             mujoco.mj_jacSite(model, data, jac[:3], jac[3:], site_id)
+
             # Calculate full inertia matrix
             mujoco.mj_fullM(model, M_full, data.qM)
-            
             # Calculate the task space inertia matrix 
             M_inv = np.linalg.inv(M_full)
-            Mx_inv = np.dot(jac, np.dot(M_inv, jac.T))
+            Mx_inv = jac @ M_inv @ jac.T
             if abs(np.linalg.det(Mx_inv)) >= 1e-3:
                 # do the linalg inverse if matrix is non-singular
                 # because it's faster and more accurate
@@ -110,11 +108,14 @@ def main() -> None:
                 # singular values < (rcond * max(singular_values)) set to 0
                 Mx = np.linalg.pinv(Mx_inv, rcond=1e-3 * 0.1)
             
+            # Get the joint velocities for the controlled DOF.
             dq = data.qvel[dof_ids]
 
             # Initialize the task space control signal (desired end-effector motion).
             u_task = np.zeros(6)
 
+            # Scale the control signal such that the arm isn't driven to move 
+            # faster in position or orientation than the specified vmax values.
             norm_xyz = np.linalg.norm(error_pos)
             norm_abg = np.linalg.norm(error_ori)
             scale = np.ones(6)
@@ -124,19 +125,17 @@ def main() -> None:
                 scale[3:] *= scale_abg / norm_abg
 
             u_task += kv * scale * lamb * error
+            
             # joint space control signal
             u = np.zeros(model.nv)
-            # Add the task space control signal to the joint space control signal
-            u += np.dot(jac.T, np.dot(Mx, u_task))
-            # Add damping to joint space control signal
-            u += -kv * np.dot(M_full, dq)
+            # Joint space control signal += Task space control signal - Damping
+            u += jac.T @ Mx @ u_task - kv * M_full @ dq
             # Add gravity compensation to the target effort
             u += data.qfrc_bias[dof_ids]
             # Clip the target efforts to ensure they are within the allowable effort range
             target_effort = np.clip(u, min_effort, max_effort)
             # Set the control signals for the actuators to the desired target joint positions or states
             data.qfrc_applied[dof_ids] = target_effort
-            # data.ctrl[actuator_ids] = target_effort[actuator_ids]
             
             # Step the simulation.
             mujoco.mj_step(model, data)
