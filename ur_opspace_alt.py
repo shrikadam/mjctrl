@@ -93,7 +93,7 @@ def main() -> None:
             
             # Get the Jacobian with respect to the end-effector site.
             mujoco.mj_jacSite(model, data, jac[:3], jac[3:], site_id)
-
+            
             # Calculate full inertia matrix
             mujoco.mj_fullM(model, M_full, data.qM)
             # Calculate the task space inertia matrix 

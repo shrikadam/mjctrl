@@ -272,7 +272,7 @@ def get_mocap_pose(mocap, physics):
     return pose
 
 def main() -> None:
-    model = mjcf.from_path("universal_robots_ur10e/scene.xml")
+    model = mjcf.from_path("universal_robots_ur10e_eoat/scene.xml")
     mocap = model.worldbody.add("body", name="mocap", mocap=True)
     mocap.add(
             "geom",
