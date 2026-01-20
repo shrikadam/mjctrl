@@ -109,7 +109,7 @@
                   <joint name="wrist_3"/>
                   <geom material="linkgray" mesh="wrist3" class="visual"/>
                   <geom class="eef_collision" pos="0 0.08 0" quat="1 1 0 0" size="0.04 0.02"/>
-                  <site name="attachment_site" size="0.01" pos="0 0.1 0" quat="-1 1 1 1" rgba="1 0 0 1" group="1"/>
+                  <site name="attachment_site" pos="0 0.1 0" quat="1 1 -1 1" rgba="1 0 0 1" group="1"/>
                 </body>
               </body>
             </body>
@@ -119,7 +119,7 @@
     </body>
   </worldbody>
 
-  <actuator>
+  <!-- <actuator>
     <position class="position" name="shoulder_pan" joint="shoulder_pan"/>
     <position class="position" name="shoulder_lift" joint="shoulder_lift"/>
     <position class="position_limited" name="elbow" joint="elbow"/>
@@ -130,5 +130,5 @@
 
   <keyframe>
     <key name="home" qpos="-1.5708 -1.5708 1.5708 -1.5708 -1.5708 0" ctrl="-1.5708 -1.5708 1.5708 -1.5708 -1.5708 0"/>
-  </keyframe>
+  </keyframe> -->
 </mujoco>
