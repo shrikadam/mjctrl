@@ -18,15 +18,6 @@
       <default class="joint_limited">
         <joint range="-3.1415 3.1415"/>
       </default>
-      <default class="position">
-        <position ctrlrange="-6.2831 6.2831" kp="2000" kv="100" forcerange="-150 150"/>
-        <default class="position_limited">
-          <position ctrlrange="-3.1415 3.1415"/>
-        </default>
-        <default class="position_small">
-          <position kp="500" kv="25" forcerange="-28 28"/>
-        </default>
-      </default>
     </default>
   </default>
 
@@ -119,16 +110,16 @@
     </body>
   </worldbody>
 
-  <!-- <actuator>
-    <position class="position" name="shoulder_pan" joint="shoulder_pan"/>
-    <position class="position" name="shoulder_lift" joint="shoulder_lift"/>
-    <position class="position_limited" name="elbow" joint="elbow"/>
-    <position class="position_small" name="wrist_1" joint="wrist_1"/>
-    <position class="position_small" name="wrist_2" joint="wrist_2"/>
-    <position class="position_small" name="wrist_3" joint="wrist_3"/>
+  <actuator>
+    <motor name="shoulder_pan" joint="shoulder_pan" gear="1" ctrlrange="-150 150"/>
+    <motor name="shoulder_lift" joint="shoulder_lift" gear="1" ctrlrange="-150 150"/>
+    <motor name="elbow" joint="elbow" gear="1" ctrlrange="-150 150"/>
+    <motor name="wrist_1" joint="wrist_1" gear="1" ctrlrange="-28 28"/>
+    <motor name="wrist_2" joint="wrist_2" gear="1" ctrlrange="-28 28"/>
+    <motor name="wrist_3" joint="wrist_3" gear="1" ctrlrange="-28 28"/>
   </actuator>
 
   <keyframe>
-    <key name="home" qpos="-1.5708 -1.5708 1.5708 -1.5708 -1.5708 0" ctrl="-1.5708 -1.5708 1.5708 -1.5708 -1.5708 0"/>
-  </keyframe> -->
+    <key name="home" qpos="0 -1.5708 1.5708 -1.5708 -1.5708 0" ctrl="-1.5708 -1.5708 1.5708 -1.5708 -1.5708 0"/>
+  </keyframe>
 </mujoco>
