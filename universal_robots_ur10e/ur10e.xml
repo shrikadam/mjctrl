@@ -122,7 +122,7 @@
                   <geom material="linkgray" mesh="wrist3" class="visual" />
                   <geom class="eef_collision" pos="0 0.097 0" quat="1 1 0 0"
                     size="0.046 0.02" />
-                  <site name="attachment_site" pos="0 0.15 0" quat="1 1 -1 1"/>
+                  <site name="attachment_site" pos="0 0.12 0" quat="1 1 -1 1"/>
                 </body>
               </body>
             </body>
@@ -132,21 +132,16 @@
     </body>
   </worldbody>
 
-  <!-- <actuator>
-    <general class="position" name="shoulder_pan" joint="shoulder_pan" />
-    <general class="position" name="shoulder_lift" joint="shoulder_lift" />
-    <general class="position_limited" name="elbow" joint="elbow" />
-    <general class="position_small" name="wrist_1" joint="wrist_1" />
-    <general class="position_small" name="wrist_2" joint="wrist_2" />
-    <general class="position_small" name="wrist_3" joint="wrist_3" />
-  </actuator> -->
+  <actuator>
+    <motor name="shoulder_pan" joint="shoulder_pan" gear="1" ctrlrange="-150 150"/>
+    <motor name="shoulder_lift" joint="shoulder_lift" gear="1" ctrlrange="-150 150"/>
+    <motor name="elbow" joint="elbow" gear="1" ctrlrange="-150 150"/>
+    <motor name="wrist_1" joint="wrist_1" gear="1" ctrlrange="-28 28"/>
+    <motor name="wrist_2" joint="wrist_2" gear="1" ctrlrange="-28 28"/>
+    <motor name="wrist_3" joint="wrist_3" gear="1" ctrlrange="-28 28"/>
+  </actuator>
 
-  <!-- <keyframe>
-    <key name="home" qpos="-1.5708 -1.5708 1.5708 -1.5708 -1.5708 0"
-      ctrl="-1.5708 -1.5708 1.5708 -1.5708 -1.5708 0" />
-  </keyframe>  -->
-
-  <!-- <keyframe>
+  <keyframe>
     <key name="home" qpos="0 -1.5708 1.5708 -1.5708 -1.5708 0"/>
-  </keyframe>  -->
+  </keyframe> 
 </mujoco>
